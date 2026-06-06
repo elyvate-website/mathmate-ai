@@ -1,8 +1,14 @@
 import Groq from 'groq-sdk'
-import { AISolution, SolutionStep } from '@/types'
+import { AISolution } from '@/types'
 import { GROQ_MODEL } from '@/constants'
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+// Lazy initialize — avoids build-time crash when env var not present
+function getGroqClient() {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY is not set in environment variables')
+  }
+  return new Groq({ apiKey: process.env.GROQ_API_KEY })
+}
 
 const SYSTEM_PROMPT = `You are a mathematics tutor AI for Bangladesh NCTB curriculum students (Class 3-10).
 Your task: solve a math problem step-by-step and create MCQ questions for each step.
@@ -42,6 +48,8 @@ export async function generateSolution(
   questionText: string,
   questionLatex?: string
 ): Promise<AISolution> {
+  const groq = getGroqClient()
+
   const userPrompt = `
 Class: ${classLevel}
 Topic: ${topicTitle}
@@ -55,14 +63,14 @@ Return ONLY the JSON object.`
   const completion = await groq.chat.completions.create({
     model: GROQ_MODEL,
     messages: [
-      { role: 'system',  content: SYSTEM_PROMPT },
-      { role: 'user',    content: userPrompt    },
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user',   content: userPrompt    },
     ],
     temperature: 0.3,
     max_tokens:  2000,
   })
 
-  const raw = completion.choices[0]?.message?.content ?? '{}'
+  const raw   = completion.choices[0]?.message?.content ?? '{}'
   const clean = raw.replace(/```json|```/g, '').trim()
   const parsed = JSON.parse(clean) as AISolution
   return parsed
@@ -73,6 +81,8 @@ export async function generatePracticeVariant(
   classLevel: number,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium'
 ): Promise<AISolution> {
+  const groq = getGroqClient()
+
   const prompt = `
 Generate a NEW ${difficulty}-level practice problem for:
 Class: ${classLevel}
