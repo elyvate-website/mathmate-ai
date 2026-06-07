@@ -1,6 +1,5 @@
 'use client'
 import { useState }   from 'react'
-import { useRouter }  from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button }     from '@/components/ui/Button'
 import { CLASSES }    from '@/constants'
@@ -9,7 +8,6 @@ import { cn }         from '@/lib/utils'
 type Role = 'student' | 'parent'
 
 export default function OnboardingPage() {
-  const router   = useRouter()
   const supabase = createClient()
 
   const [step,    setStep]    = useState<1 | 2>(1)
@@ -28,52 +26,52 @@ export default function OnboardingPage() {
     setError('')
 
     try {
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        router.replace('/login')
+        window.location.href = '/login'
         return
       }
 
-      // Save profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id:          user.id,
-          full_name:   user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Student',
-          class_level: cls,
-          role:        role,
-          avatar_url:  user.user_metadata?.avatar_url ?? null,
-        })
+        .upsert(
+          {
+            id:          user.id,
+            full_name:   user.user_metadata?.full_name
+                          ?? user.email?.split('@')[0]
+                          ?? 'Student',
+            class_level: cls,
+            role:        role,
+            avatar_url:  user.user_metadata?.avatar_url ?? null,
+          },
+          { onConflict: 'id' }
+        )
 
       if (profileError) {
-        console.error('Profile error:', profileError)
-        setError(`প্রোফাইল সংরক্ষণ করতে সমস্যা হয়েছে: ${profileError.message}`)
+        console.error('Profile save error:', profileError)
+        setError(`সংরক্ষণ করতে সমস্যা হয়েছে: ${profileError.message}`)
         setLoading(false)
         return
       }
 
-      // Save initial stats
-      const { error: statsError } = await supabase
+      await supabase
         .from('user_stats')
-        .upsert({
-          user_id:        user.id,
-          total_xp:       0,
-          total_coins:    0,
-          current_streak: 0,
-          longest_streak: 0,
-          last_active:    new Date().toISOString().split('T')[0],
-          level:          1,
-        })
+        .upsert(
+          {
+            user_id:        user.id,
+            total_xp:       0,
+            total_coins:    0,
+            current_streak: 0,
+            longest_streak: 0,
+            last_active:    new Date().toISOString().split('T')[0],
+            level:          1,
+          },
+          { onConflict: 'user_id' }
+        )
 
-      if (statsError) {
-        console.error('Stats error:', statsError)
-        // Non-critical error, continue anyway
-      }
-
-      // Success — go to dashboard
-      router.replace('/dashboard')
+      // Hard redirect — forces full page reload so server reads fresh profile
+      window.location.href = '/dashboard'
 
     } catch (err: any) {
       console.error('Onboarding error:', err)
@@ -84,14 +82,14 @@ export default function OnboardingPage() {
 
   const PROFILES = [
     {
-      id:   'student' as Role,
-      icon: '🧑‍🎓',
+      id:    'student' as Role,
+      icon:  '🧑‍🎓',
       title: 'আমি ছাত্র/ছাত্রী',
       desc:  'AI টিউটরের সাহায্যে গণিত শিখব ও অনুশীলন করব',
     },
     {
-      id:   'parent' as Role,
-      icon: '👨‍👩‍👦',
+      id:    'parent' as Role,
+      icon:  '👨‍👩‍👦',
       title: 'আমি অভিভাবক',
       desc:  'সন্তানের অগ্রগতি ট্র্যাক করব',
     },
@@ -106,9 +104,7 @@ export default function OnboardingPage() {
           <div key={n} className="flex items-center gap-2">
             <div className={cn(
               'w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-colors',
-              step >= n
-                ? 'bg-brand-primary text-white'
-                : 'bg-gray-100 text-gray-400'
+              step >= n ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-400'
             )}>
               {n}
             </div>
@@ -122,20 +118,19 @@ export default function OnboardingPage() {
         ))}
       </div>
 
-      {/* Error message */}
+      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-5 font-medium">
-          {error}
+          ❌ {error}
         </div>
       )}
 
-      {/* Step 1 — Class selection */}
+      {/* Step 1 — Class */}
       {step === 1 && (
         <>
           <h2 className="text-2xl font-black text-gray-900 mb-1">ক্লাস নির্বাচন করো</h2>
           <p className="text-gray-400 text-sm mb-7">তোমার ক্লাস বেছে নাও</p>
-
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-3 gap-3 mb-6">
             {CLASSES.map(c => (
               <button
                 key={c}
@@ -151,26 +146,18 @@ export default function OnboardingPage() {
               </button>
             ))}
           </div>
-
           <div className="bg-brand-light rounded-2xl p-4 mb-6">
-            <p className="text-brand-primary text-sm font-bold">
-              ✓ Class {cls} নির্বাচিত হয়েছে
-            </p>
-            <p className="text-gray-500 text-xs mt-0.5">
-              পরে প্রোফাইল থেকে পরিবর্তন করা যাবে
-            </p>
+            <p className="text-brand-primary text-sm font-bold">✓ Class {cls} নির্বাচিত</p>
+            <p className="text-gray-500 text-xs mt-0.5">পরে প্রোফাইল থেকে পরিবর্তন করা যাবে</p>
           </div>
         </>
       )}
 
-      {/* Step 2 — Role selection */}
+      {/* Step 2 — Role */}
       {step === 2 && (
         <>
           <h2 className="text-2xl font-black text-gray-900 mb-1">প্রোফাইল নির্বাচন করো</h2>
-          <p className="text-gray-400 text-sm mb-7">
-            তোমার অভিজ্ঞতা ব্যক্তিগত করতে প্রোফাইল বেছে নাও
-          </p>
-
+          <p className="text-gray-400 text-sm mb-7">তোমার অভিজ্ঞতা ব্যক্তিগত করতে প্রোফাইল বেছে নাও</p>
           <div className="flex flex-col gap-4 mb-6">
             {PROFILES.map(p => (
               <button
@@ -197,9 +184,7 @@ export default function OnboardingPage() {
                   'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
                   role === p.id ? 'border-brand-primary' : 'border-gray-300'
                 )}>
-                  {role === p.id && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
-                  )}
+                  {role === p.id && <div className="w-2.5 h-2.5 rounded-full bg-brand-primary" />}
                 </div>
               </button>
             ))}
@@ -207,20 +192,14 @@ export default function OnboardingPage() {
         </>
       )}
 
-      {/* Continue button */}
-      <Button
-        fullWidth
-        loading={loading}
-        onClick={handleContinue}
-      >
-        {step === 1 ? 'পরবর্তী →' : 'শুরু করি 🚀'}
+      <Button fullWidth loading={loading} onClick={handleContinue}>
+        {step === 1 ? 'পরবর্তী →' : loading ? 'সংরক্ষণ হচ্ছে...' : 'শুরু করি 🚀'}
       </Button>
 
-      {/* Back button for step 2 */}
       {step === 2 && !loading && (
         <button
           onClick={() => { setStep(1); setError('') }}
-          className="w-full text-center mt-4 text-gray-400 text-sm font-bold hover:text-gray-600"
+          className="w-full text-center mt-4 text-gray-400 text-sm font-bold"
         >
           ← আগে ফিরে যাও
         </button>
