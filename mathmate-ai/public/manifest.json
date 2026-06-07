@@ -1,0 +1,8 @@
+{
+  "name": "MathMate AI",
+  "short_name": "MathMate",
+  "theme_color": "#7C3AED",
+  "background_color": "#0E0628",
+  "display": "standalone",
+  "start_url": "/"
+}

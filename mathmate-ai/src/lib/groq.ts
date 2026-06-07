@@ -67,7 +67,7 @@ Return ONLY the JSON object.`
       { role: 'user',   content: userPrompt    },
     ],
     temperature: 0.3,
-    max_tokens:  2000,
+    max_tokens:  4000,
   })
 
   const raw   = completion.choices[0]?.message?.content ?? '{}'
@@ -98,7 +98,7 @@ Return ONLY the JSON object following the exact structure defined.`
       { role: 'user',   content: prompt         },
     ],
     temperature: 0.7,
-    max_tokens:  2000,
+    max_tokens:  4000,
   })
 
   const raw   = completion.choices[0]?.message?.content ?? '{}'
