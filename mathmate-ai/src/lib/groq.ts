@@ -1,79 +1,77 @@
-import Groq from 'groq-sdk'
+import Groq        from 'groq-sdk'
 import { AISolution } from '@/types'
-import { GROQ_MODEL } from '@/constants'
 
-// Lazy initialize — avoids build-time crash when env var not present
+const GROQ_MODEL = 'llama-3.3-70b-versatile'
+
 function getGroqClient() {
-  if (!process.env.GROQ_API_KEY) {
-    throw new Error('GROQ_API_KEY is not set in environment variables')
-  }
+  if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY not set')
   return new Groq({ apiKey: process.env.GROQ_API_KEY })
 }
 
-const SYSTEM_PROMPT = `You are a mathematics tutor AI for Bangladesh NCTB curriculum students (Class 3-10).
-Your task: solve a math problem step-by-step and create MCQ questions for each step.
+const SYSTEM_PROMPT = `You are a mathematics tutor AI for Bangladesh NCTB curriculum students (Class 9-10).
+Your task: solve a math problem step-by-step.
 
 STRICT RULES:
 1. Return ONLY valid JSON — no extra text, no markdown, no backticks
-2. Each step must have EXACTLY 4 MCQ options
-3. Only ONE option is correct per step
-4. Generate 4-6 meaningful steps (not more, not less)
-5. All explanations must be in Bangla (simple language)
-6. Use LaTeX format for math expressions
-7. Steps must guide thinking — not just state answers
+2. Generate 3-6 meaningful solution steps
+3. All text must be in Bangla (simple language for students)
+4. Use LaTeX format for all math expressions
 
 JSON STRUCTURE (follow exactly):
 {
-  "problem_bn": "problem in Bangla context",
-  "problem_latex": "LaTeX format of problem",
+  "problem_bn": "problem in Bangla",
+  "problem_latex": "LaTeX format",
   "steps": [
     {
       "step_number": 1,
-      "instruction": "What to do at this step (Bangla)",
-      "working": "the calculation/answer for this step",
+      "instruction": "What to do (Bangla)",
+      "working": "the calculation text",
       "working_latex": "LaTeX format",
-      "explanation": "Why this is correct (Bangla, simple)",
-      "mcq_options": ["option1", "option2", "option3", "option4"],
-      "correct_index": 0
+      "explanation": "Why this works (Bangla)"
     }
   ],
   "final_answer": "final answer text",
   "final_answer_latex": "LaTeX final answer",
-  "concept_summary": "key concept to remember (Bangla)"
+  "concept_summary": "key concept (Bangla)"
 }`
 
-export async function generateSolution(
-  topicTitle: string,
-  classLevel: number,
-  questionText: string,
-  questionLatex?: string
-): Promise<AISolution> {
+async function callGroqWithRetry(prompt: string, retries = 2): Promise<string> {
   const groq = getGroqClient()
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const completion = await groq.chat.completions.create({
+        model: GROQ_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user',   content: prompt },
+        ],
+        temperature: 0.3,
+        max_tokens:  2000,
+      })
+      const raw   = completion.choices[0]?.message?.content ?? '{}'
+      const clean = raw.replace(/```json|```/g, '').trim()
+      // Validate JSON before returning
+      JSON.parse(clean)
+      return clean
+    } catch (err) {
+      if (attempt === retries) throw err
+      await new Promise(r => setTimeout(r, 500 * (attempt + 1)))
+    }
+  }
+  throw new Error('All retries exhausted')
+}
 
-  const userPrompt = `
-Class: ${classLevel}
-Topic: ${topicTitle}
-Question (Bangla): ${questionText}
-${questionLatex ? `Question (LaTeX): ${questionLatex}` : ''}
+export async function generateSolution(topic: any): Promise<AISolution> {
+  const prompt = `
+Class: ${topic.chapters?.class_level ?? 9}
+Topic: ${topic.title_bn}
+${topic.title_en ? `Topic (English): ${topic.title_en}` : ''}
 
-Generate a complete step-by-step interactive solution with MCQ questions for each step.
-Make it appropriate for Class ${classLevel} NCTB level.
+Generate a complete step-by-step solution for this topic.
 Return ONLY the JSON object.`
 
-  const completion = await groq.chat.completions.create({
-    model: GROQ_MODEL,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user',   content: userPrompt    },
-    ],
-    temperature: 0.3,
-    max_tokens:  4000,
-  })
-
-  const raw   = completion.choices[0]?.message?.content ?? '{}'
-  const clean = raw.replace(/```json|```/g, '').trim()
-  const parsed = JSON.parse(clean) as AISolution
-  return parsed
+  const json = await callGroqWithRetry(prompt)
+  return JSON.parse(json) as AISolution
 }
 
 export async function generatePracticeVariant(
@@ -81,27 +79,12 @@ export async function generatePracticeVariant(
   classLevel: number,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium'
 ): Promise<AISolution> {
-  const groq = getGroqClient()
-
   const prompt = `
 Generate a NEW ${difficulty}-level practice problem for:
 Class: ${classLevel}
 Topic: ${topicTitle}
+Return ONLY the JSON object.`
 
-Create a fresh problem (different from previous), solve it step-by-step with MCQ questions.
-Return ONLY the JSON object following the exact structure defined.`
-
-  const completion = await groq.chat.completions.create({
-    model: GROQ_MODEL,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user',   content: prompt         },
-    ],
-    temperature: 0.7,
-    max_tokens:  4000,
-  })
-
-  const raw   = completion.choices[0]?.message?.content ?? '{}'
-  const clean = raw.replace(/```json|```/g, '').trim()
-  return JSON.parse(clean) as AISolution
+  const json = await callGroqWithRetry(prompt, 1)
+  return JSON.parse(json) as AISolution
 }

@@ -1,18 +1,7 @@
-import { cn } from '@/lib/utils'
-
-export function LoadingSpinner({ className }: { className?: string }) {
+export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const s = size === 'sm' ? 'w-6 h-6' : size === 'lg' ? 'w-14 h-14' : 'w-10 h-10'
   return (
-    <div className={cn('flex items-center justify-center', className)}>
-      <div className="w-8 h-8 border-4 border-brand-light border-t-brand-primary rounded-full animate-spin" />
-    </div>
-  )
-}
-
-export function PageLoader() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-4">
-      <div className="w-12 h-12 border-4 border-brand-light border-t-brand-primary rounded-full animate-spin" />
-      <p className="text-sm text-gray-500 font-medium animate-pulse">লোড হচ্ছে...</p>
-    </div>
+    <div className={`${s} border-4 border-brand-light rounded-full animate-spin`}
+      style={{ borderTopColor: '#2D7A3A' }} />
   )
 }

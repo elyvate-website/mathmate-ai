@@ -1,7 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect }     from 'next/navigation'
-import { TopBar }       from '@/components/layout/TopBar'
-import { BottomNav }    from '@/components/layout/BottomNav'
+import { createClient }  from '@/lib/supabase/server'
+import { redirect }      from 'next/navigation'
+import { BottomNav }     from '@/components/layout/BottomNav'
 import { ProfileClient } from './ProfileClient'
 
 export default async function ProfilePage() {
@@ -14,7 +13,10 @@ export default async function ProfilePage() {
     supabase.from('user_stats').select('*').eq('user_id', user.id).single(),
   ])
 
-  if (!profile) redirect('/onboarding')
-
-  return <ProfileClient profile={profile} stats={stats} userEmail={user.email ?? ''} />
+  return (
+    <>
+      <ProfileClient profile={profile} stats={stats} userEmail={user.email ?? ''} />
+      <BottomNav />
+    </>
+  )
 }

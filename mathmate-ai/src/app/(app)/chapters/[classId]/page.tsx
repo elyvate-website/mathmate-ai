@@ -2,10 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect }     from 'next/navigation'
 import Link             from 'next/link'
 import { BottomNav }    from '@/components/layout/BottomNav'
-import { TopBar }       from '@/components/layout/TopBar'
-import { Badge }        from '@/components/ui/Badge'
-import { ChevronRight, Lock } from 'lucide-react'
-import { chapterEmoji } from '@/lib/utils'
+import { ChevronLeft, ChevronRight, Lock, CheckCircle2 } from 'lucide-react'
 
 export default async function ChaptersPage({ params }: { params: { classId: string } }) {
   const supabase   = createClient()
@@ -13,81 +10,112 @@ export default async function ChaptersPage({ params }: { params: { classId: stri
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: chapters } = await supabase
-    .from('chapters')
-    .select('*, topics(*)')
-    .eq('class_level', classLevel)
-    .order('chapter_num')
+  const [{ data: chapters }, { data: progressRows }] = await Promise.all([
+    supabase.from('chapters').select('*').eq('class_level', classLevel).order('chapter_num'),
+    supabase.from('user_progress').select('chapter_id, accuracy').eq('user_id', user.id),
+  ])
+
+  // Compute per-chapter progress
+  const chapterAccMap: Record<number, number[]> = {}
+  for (const p of (progressRows ?? [])) {
+    if (!chapterAccMap[p.chapter_id]) chapterAccMap[p.chapter_id] = []
+    chapterAccMap[p.chapter_id].push(p.accuracy)
+  }
+  const chapterProgress = (id: number) => {
+    const accs = chapterAccMap[id]
+    if (!accs || accs.length === 0) return 0
+    return Math.round(accs.reduce((a, b) => a + b, 0) / accs.length)
+  }
+
+  const totalProgress = chapters && chapters.length > 0
+    ? Math.round(chapters.reduce((sum, ch) => sum + chapterProgress(ch.id), 0) / chapters.length)
+    : 0
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-white pb-24">
       {/* Header */}
-      <div className="bg-white px-5 pt-12 pb-5 shadow-sm">
-        <TopBar showBack />
-        <div className="flex justify-between items-center mt-2">
-          <div>
-            <h1 className="text-xl font-black text-gray-900">অধ্যায়সমূহ</h1>
-            <p className="text-gray-400 text-sm">শ্রেণি {classLevel} — গণিত</p>
+      <div className="px-5 pt-12 pb-5">
+        <Link href="/subjects" className="flex items-center gap-1 text-ninja-muted mb-4">
+          <ChevronLeft size={18} />
+          <span className="text-sm font-semibold">Back</span>
+        </Link>
+        <h1 className="text-2xl font-black text-ninja-text">Mathematics</h1>
+
+        {/* Overall progress */}
+        <div className="mt-4 bg-white border border-ninja-border rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-ninja-muted text-sm font-semibold">Overall Progress</p>
+            <span className="text-brand-primary font-black text-lg">{totalProgress}%</span>
           </div>
-          {/* Class switcher */}
-          <div className="flex gap-1.5">
-            {[9, 10].map(c => (
-              <Link key={c} href={`/chapters/${c}`}
-                className={`px-3 py-1.5 rounded-full text-xs font-black transition-colors ${
-                  classLevel === c ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-500 hover:bg-brand-light hover:text-brand-primary'
-                }`}>
-                {c}ম
-              </Link>
-            ))}
+          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ background: 'linear-gradient(90deg, #2D7A3A, #3DAE4F)', width: `${totalProgress}%` }}
+            />
           </div>
+          <div
+            className="mt-3 w-10 h-10 rounded-full flex items-center justify-center ml-auto"
+            style={{ background: '#E8F5E9' }}
+          >
+            🎯
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mt-4">
+          <button className="px-5 py-2 rounded-full font-black text-sm text-white" style={{ background: '#2D7A3A' }}>
+            Chapters
+          </button>
+          <button className="px-5 py-2 rounded-full font-bold text-sm text-ninja-muted bg-gray-100">
+            Topics
+          </button>
         </div>
       </div>
 
-      {/* Chapters list */}
-      <div className="px-5 pt-4">
-        {(chapters ?? []).map((chapter, i) => {
-          const topicsCount = (chapter.topics as any[])?.length ?? 0
-          const isLocked    = i > 3 // First 4 unlocked for demo
+      {/* Chapter list */}
+      <div className="px-5 space-y-2">
+        {(chapters ?? []).map((ch, i) => {
+          const pct    = chapterProgress(ch.id)
+          const done   = pct >= 90
+          const active = !done && i === (chapters ?? []).findIndex(c => chapterProgress(c.id) < 90)
+          const locked = i > 5 && pct === 0
 
           return (
             <Link
-              key={chapter.id}
-              href={isLocked ? '#' : `/lessons/${chapter.id}`}
-              className={`flex items-center gap-4 bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 ${
-                isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-md active:scale-95 transition-all'
-              }`}
+              key={ch.id}
+              href={locked ? '#' : `/lessons/${ch.id}`}
+              className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border transition-all ${
+                active
+                  ? 'border-brand-primary bg-brand-light shadow-sm'
+                  : 'border-ninja-border bg-white'
+              } ${locked ? 'opacity-50 pointer-events-none' : 'active:scale-95'}`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${
-                isLocked ? 'bg-gray-100' : 'bg-brand-light'
-              }`}>
-                {isLocked ? '🔒' : chapterEmoji(chapter.chapter_num)}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-gray-400 text-xs">অধ্যায় {chapter.chapter_num}</p>
-                  {i === 0 && <Badge variant="green">✓ সম্পন্ন</Badge>}
-                  {i === 2 && <Badge variant="purple">চলমান</Badge>}
+              <span className="text-ninja-muted text-sm font-bold w-4 flex-shrink-0">{i + 1}.</span>
+              <p className={`flex-1 font-bold text-sm ${active ? 'text-brand-primary' : 'text-ninja-text'}`}>
+                {ch.title_bn}
+              </p>
+              {done ? (
+                <CheckCircle2 size={18} className="text-brand-primary flex-shrink-0" />
+              ) : locked ? (
+                <Lock size={14} className="text-ninja-muted flex-shrink-0" />
+              ) : active ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-brand-primary text-xs font-black">{pct}%</span>
+                  <ChevronRight size={16} className="text-brand-primary" />
                 </div>
-                <p className="font-black text-gray-900 text-sm leading-snug truncate">
-                  {chapter.title_bn}
-                </p>
-                <p className="text-gray-400 text-xs mt-0.5">{topicsCount} টপিক</p>
-              </div>
-
-              {isLocked
-                ? <Lock size={16} className="text-gray-400 flex-shrink-0" />
-                : <ChevronRight size={18} className="text-brand-primary flex-shrink-0" />
-              }
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  {pct > 0 && <span className="text-ninja-muted text-xs font-bold">{pct}%</span>}
+                  <div className="w-2.5 h-2.5 rounded-full bg-ninja-border" />
+                </div>
+              )}
             </Link>
           )
         })}
 
         {(!chapters || chapters.length === 0) && (
           <div className="text-center py-16">
-            <div className="text-5xl mb-3">📚</div>
-            <p className="text-gray-500 font-bold">কন্টেন্ট শীঘ্রই আসছে...</p>
-            <p className="text-gray-400 text-sm mt-1">ডেটাবেজে অধ্যায় যোগ করো</p>
+            <p className="text-ninja-muted font-bold">Content coming soon...</p>
           </div>
         )}
       </div>

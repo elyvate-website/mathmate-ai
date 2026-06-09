@@ -1,209 +1,157 @@
 'use client'
-import { useState }   from 'react'
+import { useState }     from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Button }     from '@/components/ui/Button'
-import { CLASSES }    from '@/constants'
-import { cn }         from '@/lib/utils'
+import Image             from 'next/image'
+import { cn }           from '@/lib/utils'
 
+const CLASSES = [3,4,5,6,7,8,9,10]
 type Role = 'student' | 'parent'
 
 export default function OnboardingPage() {
   const supabase = createClient()
-
-  const [step,    setStep]    = useState<1 | 2>(1)
-  const [cls,     setCls]     = useState<number>(9)
+  const [step,    setStep]    = useState<1|2>(1)
+  const [cls,     setCls]     = useState(9)
   const [role,    setRole]    = useState<Role>('student')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
   const handleContinue = async () => {
-    if (step === 1) {
-      setStep(2)
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
+    if (step === 1) { setStep(2); return }
+    setLoading(true); setError('')
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      const { data: { user }, error: userErr } = await supabase.auth.getUser()
+      if (userErr || !user) { window.location.href = '/login'; return }
 
-      if (userError || !user) {
-        window.location.href = '/login'
-        return
-      }
+      const { error: profileErr } = await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Ninja',
+        class_level: cls,
+        role,
+        avatar_url: user.user_metadata?.avatar_url ?? null,
+      }, { onConflict: 'id' })
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id:          user.id,
-            full_name:   user.user_metadata?.full_name
-                          ?? user.email?.split('@')[0]
-                          ?? 'Student',
-            class_level: cls,
-            role:        role,
-            avatar_url:  user.user_metadata?.avatar_url ?? null,
-          },
-          { onConflict: 'id' }
-        )
+      if (profileErr) { setError(profileErr.message); setLoading(false); return }
 
-      if (profileError) {
-        console.error('Profile save error:', profileError)
-        setError(`সংরক্ষণ করতে সমস্যা হয়েছে: ${profileError.message}`)
-        setLoading(false)
-        return
-      }
+      await supabase.from('user_stats').upsert({
+        user_id: user.id,
+        total_xp: 0, total_coins: 0, total_gems: 0,
+        current_streak: 0, longest_streak: 0,
+        last_active: new Date().toISOString().split('T')[0],
+        level: 1, lessons_completed: 0, quests_completed: 0,
+      }, { onConflict: 'user_id' })
 
-      await supabase
-        .from('user_stats')
-        .upsert(
-          {
-            user_id:        user.id,
-            total_xp:       0,
-            total_coins:    0,
-            current_streak: 0,
-            longest_streak: 0,
-            last_active:    new Date().toISOString().split('T')[0],
-            level:          1,
-          },
-          { onConflict: 'user_id' }
-        )
-
-      // Hard redirect — forces full page reload so server reads fresh profile
       window.location.href = '/dashboard'
-
-    } catch (err: any) {
-      console.error('Onboarding error:', err)
-      setError('কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করো।')
+    } catch (e: any) {
+      setError('কিছু সমস্যা হয়েছে। আবার চেষ্টা করো।')
       setLoading(false)
     }
   }
 
-  const PROFILES = [
-    {
-      id:    'student' as Role,
-      icon:  '🧑‍🎓',
-      title: 'আমি ছাত্র/ছাত্রী',
-      desc:  'AI টিউটরের সাহায্যে গণিত শিখব ও অনুশীলন করব',
-    },
-    {
-      id:    'parent' as Role,
-      icon:  '👨‍👩‍👦',
-      title: 'আমি অভিভাবক',
-      desc:  'সন্তানের অগ্রগতি ট্র্যাক করব',
-    },
-  ]
-
   return (
-    <div className="min-h-screen bg-white px-5 py-10">
-
-      {/* Step indicators */}
-      <div className="flex items-center gap-2 mb-8">
-        {[1, 2].map(n => (
-          <div key={n} className="flex items-center gap-2">
-            <div className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-colors',
-              step >= n ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-400'
-            )}>
-              {n}
-            </div>
-            {n < 2 && (
-              <div className={cn(
-                'h-0.5 w-12 rounded-full transition-colors',
-                step > n ? 'bg-brand-primary' : 'bg-gray-100'
-              )} />
-            )}
-          </div>
-        ))}
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Top green hero */}
+      <div
+        className="w-full flex flex-col items-center py-12 px-6 rounded-b-[40px]"
+        style={{ background: 'linear-gradient(160deg, #1B5E20, #2D7A3A)' }}
+      >
+        <div className="animate-float" style={{ animationDuration: '3.5s' }}>
+          <Image src="/Ninja Greetings 2.png" alt="ninja" width={160} height={160} className="object-contain drop-shadow-2xl" />
+        </div>
+        <h2 className="text-white text-2xl font-black mt-4 text-center">
+          {step === 1 ? 'তোমার ক্লাস বেছে নাও' : 'তুমি কে?'}
+        </h2>
+        <p className="text-white/60 text-sm text-center mt-1">
+          {step === 1 ? 'আমরা তোমার জন্য কাস্টমাইজ করব' : 'তোমার অভিজ্ঞতা ব্যক্তিগত হবে'}
+        </p>
+        {/* Step dots */}
+        <div className="flex gap-2 mt-5">
+          {[1,2].map(n => (
+            <div key={n} className={`h-2 rounded-full transition-all ${step >= n ? 'w-6 bg-white' : 'w-2 bg-white/30'}`} />
+          ))}
+        </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-5 font-medium">
-          ❌ {error}
-        </div>
-      )}
+      {/* Content */}
+      <div className="flex-1 px-6 pt-6 pb-8">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-4 font-bold">
+            {error}
+          </div>
+        )}
 
-      {/* Step 1 — Class */}
-      {step === 1 && (
-        <>
-          <h2 className="text-2xl font-black text-gray-900 mb-1">ক্লাস নির্বাচন করো</h2>
-          <p className="text-gray-400 text-sm mb-7">তোমার ক্লাস বেছে নাও</p>
-          <div className="grid grid-cols-3 gap-3 mb-6">
+        {step === 1 && (
+          <div className="grid grid-cols-4 gap-2.5 mb-6">
             {CLASSES.map(c => (
               <button
                 key={c}
                 onClick={() => setCls(c)}
                 className={cn(
-                  'py-3.5 rounded-xl font-black text-sm transition-all active:scale-95',
+                  'py-3.5 rounded-2xl font-black text-sm transition-all active:scale-95',
                   cls === c
-                    ? 'bg-brand-primary text-white shadow-lg shadow-purple-500/30'
-                    : 'bg-gray-100 text-gray-700 hover:bg-brand-light hover:text-brand-primary'
+                    ? 'text-white shadow-lg'
+                    : 'bg-gray-100 text-ninja-muted hover:bg-brand-light hover:text-brand-primary'
                 )}
+                style={cls === c ? { background: 'linear-gradient(135deg,#2D7A3A,#3DAE4F)' } : {}}
               >
-                Class {c}
+                {c}
               </button>
             ))}
           </div>
-          <div className="bg-brand-light rounded-2xl p-4 mb-6">
-            <p className="text-brand-primary text-sm font-bold">✓ Class {cls} নির্বাচিত</p>
-            <p className="text-gray-500 text-xs mt-0.5">পরে প্রোফাইল থেকে পরিবর্তন করা যাবে</p>
-          </div>
-        </>
-      )}
+        )}
 
-      {/* Step 2 — Role */}
-      {step === 2 && (
-        <>
-          <h2 className="text-2xl font-black text-gray-900 mb-1">প্রোফাইল নির্বাচন করো</h2>
-          <p className="text-gray-400 text-sm mb-7">তোমার অভিজ্ঞতা ব্যক্তিগত করতে প্রোফাইল বেছে নাও</p>
-          <div className="flex flex-col gap-4 mb-6">
-            {PROFILES.map(p => (
+        {step === 2 && (
+          <div className="space-y-3 mb-6">
+            {[
+              { id: 'student' as Role, icon: '🧑‍🎓', title: 'আমি ছাত্র/ছাত্রী', desc: 'AI টিউটরের সাহায্যে গণিত শিখব' },
+              { id: 'parent'  as Role, icon: '👨‍👩‍👦', title: 'আমি অভিভাবক',   desc: 'সন্তানের অগ্রগতি ট্র্যাক করব' },
+            ].map(p => (
               <button
                 key={p.id}
                 onClick={() => setRole(p.id)}
                 className={cn(
-                  'flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all',
-                  role === p.id
-                    ? 'border-brand-primary bg-brand-light'
-                    : 'border-gray-200 bg-white hover:border-brand-primary'
+                  'w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all active:scale-95',
+                  role === p.id ? 'border-brand-primary bg-brand-light' : 'border-ninja-border bg-white'
                 )}
               >
                 <div className={cn(
-                  'w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0',
-                  role === p.id ? 'bg-purple-gradient' : 'bg-gray-100'
-                )}>
+                  'w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0',
+                  role === p.id ? '' : 'bg-gray-100'
+                )}
+                  style={role === p.id ? { background: 'linear-gradient(135deg,#2D7A3A,#3DAE4F)' } : {}}
+                >
                   {p.icon}
                 </div>
                 <div className="flex-1">
-                  <p className="font-black text-gray-900 text-sm mb-1">{p.title}</p>
-                  <p className="text-gray-400 text-xs leading-relaxed">{p.desc}</p>
+                  <p className="font-black text-ninja-text text-sm">{p.title}</p>
+                  <p className="text-ninja-muted text-xs mt-0.5">{p.desc}</p>
                 </div>
                 <div className={cn(
-                  'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                  role === p.id ? 'border-brand-primary' : 'border-gray-300'
+                  'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                  role === p.id ? 'border-brand-primary' : 'border-ninja-border'
                 )}>
                   {role === p.id && <div className="w-2.5 h-2.5 rounded-full bg-brand-primary" />}
                 </div>
               </button>
             ))}
           </div>
-        </>
-      )}
+        )}
 
-      <Button fullWidth loading={loading} onClick={handleContinue}>
-        {step === 1 ? 'পরবর্তী →' : loading ? 'সংরক্ষণ হচ্ছে...' : 'শুরু করি 🚀'}
-      </Button>
-
-      {step === 2 && !loading && (
         <button
-          onClick={() => { setStep(1); setError('') }}
-          className="w-full text-center mt-4 text-gray-400 text-sm font-bold"
+          onClick={handleContinue}
+          disabled={loading}
+          className="w-full py-4 rounded-2xl font-black text-white text-base active:scale-95 transition-transform disabled:opacity-60"
+          style={{ background: 'linear-gradient(135deg,#2D7A3A,#3DAE4F)' }}
         >
-          ← আগে ফিরে যাও
+          {step === 1 ? 'পরবর্তী →' : loading ? 'সংরক্ষণ হচ্ছে...' : 'শুরু করি 🚀'}
         </button>
-      )}
+
+        {step === 2 && !loading && (
+          <button onClick={() => { setStep(1); setError('') }}
+            className="w-full text-center mt-4 text-ninja-muted text-sm font-bold">
+            ← পিছনে যাও
+          </button>
+        )}
+      </div>
     </div>
   )
 }

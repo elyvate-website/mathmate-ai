@@ -1,37 +1,21 @@
-export const APP_NAME = 'MathMate AI'
-export const APP_TAGLINE = 'Learn. Practice. Master.'
-export const APP_DESCRIPTION = 'Your Personal AI Math Tutor for Class 3-10 NCTB Curriculum'
-
-export const CLASSES = [3, 4, 5, 6, 7, 8, 9, 10] as const
-
-export const NAV_ITEMS = [
-  { id: 'home',     label: 'Home',     href: '/dashboard',  icon: 'Home'      },
-  { id: 'practice', label: 'Practice', href: '/practice',   icon: 'PenLine'   },
-  { id: 'learn',    label: 'Learn',    href: '/chapters/9', icon: 'BookOpen'  },
-  { id: 'progress', label: 'Progress', href: '/progress',   icon: 'BarChart2' },
-  { id: 'profile',  label: 'Profile',  href: '/profile',    icon: 'User'      },
-] as const
-
-export const XP_PER_CORRECT_STEP  = 10
-export const XP_PER_COMPLETED_TOPIC = 50
-export const COINS_PER_CORRECT_STEP = 5
-export const COINS_PER_TOPIC        = 20
-
 export const LEVEL_THRESHOLDS = [
-  0, 100, 250, 500, 900, 1400, 2000, 2800, 3800, 5000,
+  0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200,
+  4000, 5000, 6200, 7600, 9200, 11000, 13200, 15700, 18500, 21600,
+  25000, 29000, 33500, 38500, 44000, 50000, 56500, 63500, 71000, 79000,
 ]
 
-export const DIFFICULTY_COLORS = {
-  easy:   'text-green-600 bg-green-50',
-  medium: 'text-yellow-600 bg-yellow-50',
-  hard:   'text-red-600 bg-red-50',
-} as const
+export const CLASSES = [3, 4, 5, 6, 7, 8, 9, 10]
 
-export const QUESTION_TYPE_LABELS: Record<string, string> = {
-  mcq:         'বহুনির্বাচনি',
-  short:       'সংক্ষিপ্ত',
-  descriptive: 'বর্ণনামূলক',
-  proof:       'প্রমাণ',
-}
+export const SUBJECTS = [
+  { id: 'math',        title: 'Mathematics', titleBn: 'গণিত',           icon: '🧮', color: '#2D7A3A', bgColor: '#E8F5E9', active: true  },
+  { id: 'physics',     title: 'Physics',     titleBn: 'পদার্থবিজ্ঞান', icon: '⚛️', color: '#1976D2', bgColor: '#E3F2FD', active: false },
+  { id: 'chemistry',   title: 'Chemistry',   titleBn: 'রসায়ন',         icon: '🧪', color: '#7B1FA2', bgColor: '#F3E5F5', active: false },
+  { id: 'higher-math', title: 'Higher Math', titleBn: 'উচ্চতর গণিত',  icon: '📈', color: '#E64A19', bgColor: '#FBE9E7', active: false },
+]
 
-export const GROQ_MODEL = 'llama-3.3-70b-versatile'
+export const ACHIEVEMENT_DEFS = [
+  { id: 'first_correct', title: 'প্রথম সঠিক',    icon: '⭐', color: '#FFC107' },
+  { id: 'streak_3',      title: '৩ দিন স্ট্রিক',  icon: '🔥', color: '#FF5722' },
+  { id: 'chapter_done',  title: 'অধ্যায় সম্পন্ন', icon: '🏆', color: '#2D7A3A' },
+  { id: 'speed_solver',  title: 'দ্রুত সমাধান',   icon: '⚡', color: '#9C27B0' },
+]

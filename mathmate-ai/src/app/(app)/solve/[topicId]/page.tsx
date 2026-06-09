@@ -7,13 +7,22 @@ export default async function SolvePage({ params }: { params: { topicId: string 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: topic } = await supabase
-    .from('topics')
-    .select('*, chapters(title_bn, title_en, chapter_num, class_level)')
-    .eq('id', params.topicId)
-    .single()
+  const topicId = parseInt(params.topicId)
 
-  if (!topic) redirect('/chapters/9')
+  const [{ data: topic }, { data: questions }, { data: profile }] = await Promise.all([
+    supabase.from('topics').select('*, chapters(*)').eq('id', topicId).single(),
+    supabase.from('questions').select('*').eq('topic_id', topicId).order('question_num'),
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+  ])
 
-  return <SolvingClient topic={topic} userId={user.id} />
+  if (!topic) redirect('/dashboard')
+
+  return (
+    <SolvingClient
+      topic={topic}
+      questions={questions ?? []}
+      userId={user.id}
+      profile={profile}
+    />
+  )
 }

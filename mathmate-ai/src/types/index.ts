@@ -1,4 +1,3 @@
-// ─── Auth & User ─────────────────────────────────────────────
 export interface Profile {
   id: string
   full_name: string | null
@@ -13,13 +12,15 @@ export interface UserStats {
   user_id: string
   total_xp: number
   total_coins: number
+  total_gems: number
   current_streak: number
   longest_streak: number
   last_active: string
   level: number
+  lessons_completed: number
+  quests_completed: number
 }
 
-// ─── Content ─────────────────────────────────────────────────
 export interface Chapter {
   id: number
   class_level: number
@@ -39,43 +40,44 @@ export interface Topic {
   order_num: number
 }
 
+export interface Exercise {
+  id: number
+  chapter_id: number
+  exercise_num: string
+  title_bn: string | null
+}
+
 export interface Question {
   id: string
   chapter_id: number
-  topic_id: number
+  exercise_id: number | null
+  topic_id: number | null
   class_level: number
   chapter_num: number
-  chapter_title_bn: string
-  topic_code: string
   question_num: number
   sub_part: string | null
   question_type: 'mcq' | 'short' | 'descriptive' | 'proof'
   difficulty: 'easy' | 'medium' | 'hard'
   question_bn: string
   question_latex: string | null
-  option_ka: string | null
-  option_kha: string | null
-  option_ga: string | null
-  option_gha: string | null
-  correct_option: string | null
+  option_a: string | null
+  option_b: string | null
+  option_c: string | null
+  option_d: string | null
+  correct_option: 'A' | 'B' | 'C' | 'D' | null
   answer_bn: string | null
   answer_latex: string | null
   steps_json: SolutionSteps | null
-  formula_used: string | null
   hints: string | null
   marks: number
-  tags: string[]
 }
 
-// ─── AI / Solving ─────────────────────────────────────────────
 export interface SolutionStep {
   step_number: number
   instruction: string
   working: string
   working_latex: string
   explanation: string
-  mcq_options: string[]
-  correct_index: number
 }
 
 export interface SolutionSteps {
@@ -85,23 +87,13 @@ export interface SolutionSteps {
   concept_summary: string
 }
 
-export interface AISolution {
-  problem_bn: string
-  problem_latex: string
-  steps: SolutionStep[]
-  final_answer: string
-  final_answer_latex: string
-  concept_summary: string
-}
-
-// ─── Progress ─────────────────────────────────────────────────
 export interface UserProgress {
   id: string
   user_id: string
   question_id: string
-  topic_id: number
+  chapter_id: number
   score: number
-  total_steps: number
+  total_questions: number
   accuracy: number
   answers_json: AnswerRecord[]
   time_spent_sec: number
@@ -109,17 +101,25 @@ export interface UserProgress {
 }
 
 export interface AnswerRecord {
-  step: number
-  selected_index: number
-  correct_index: number
+  question_id: string
+  selected: string
+  correct: string
   is_correct: boolean
 }
 
-// ─── UI State ─────────────────────────────────────────────────
-export type NavItem = 'home' | 'practice' | 'learn' | 'progress' | 'profile'
+export interface LeaderboardEntry {
+  user_id: string
+  full_name: string
+  class_level: number
+  total_xp: number
+  level: number
+  rank: number
+}
 
-export interface ToastMessage {
+export interface Achievement {
   id: string
-  type: 'success' | 'error' | 'info'
-  message: string
+  title: string
+  icon: string
+  color: string
+  earned: boolean
 }

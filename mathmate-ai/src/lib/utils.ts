@@ -14,7 +14,7 @@ export function getLevelFromXP(xp: number): number {
 }
 
 export function getXPForNextLevel(xp: number): { current: number; next: number; progress: number } {
-  const level = getLevelFromXP(xp)
+  const level   = getLevelFromXP(xp)
   const current = LEVEL_THRESHOLDS[level - 1] ?? 0
   const next    = LEVEL_THRESHOLDS[level]    ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]
   const progress = next > current ? ((xp - current) / (next - current)) * 100 : 100
@@ -33,15 +33,11 @@ export function getAccuracyColor(accuracy: number): string {
   return 'text-red-500'
 }
 
-export function generateId(): string {
-  return Math.random().toString(36).slice(2, 11)
-}
-
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 export function chapterEmoji(chapterNum: number): string {
-  const emojis = ['📐','📊','🔢','📈','⚖️','📏','🔷','⭕','📐','🏔️','⚖️','🔗','∞','🔍','📐','📦','📊']
+  const emojis = ['📐','📊','🔢','📈','⚖️','📏','🔷','⭕','🏔️','🔗','🔍','📦']
   return emojis[(chapterNum - 1) % emojis.length]
 }

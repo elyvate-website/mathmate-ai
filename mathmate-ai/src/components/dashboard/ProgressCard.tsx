@@ -1,27 +1,21 @@
-'use client'
-import { UserStats } from '@/types'
 import { getLevelFromXP, getXPForNextLevel } from '@/lib/utils'
 
-export function ProgressCard({ stats }: { stats: UserStats | null }) {
-  const xp       = stats?.total_xp ?? 0
-  const level    = getLevelFromXP(xp)
-  const { next, progress } = getXPForNextLevel(xp)
-
+export function ProgressCard({ stats }: { stats: any }) {
+  const xp     = stats?.total_xp ?? 0
+  const level  = getLevelFromXP(xp)
+  const xpInfo = getXPForNextLevel(xp)
   return (
-    <div className="bg-purple-gradient rounded-2xl p-5 shadow-lg shadow-purple-500/30">
-      <div className="flex justify-between items-center mb-3">
-        <p className="text-white/80 text-sm font-bold">তোমার অগ্রগতি</p>
-        <span className="bg-white/20 text-white text-xs font-black px-3 py-1 rounded-full">
-          Level {level}
-        </span>
+    <div className="rounded-2xl p-4" style={{ background: 'linear-gradient(135deg,#1B5E20,#2D7A3A)' }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-black text-white text-lg">{level}</div>
+          <div><p className="text-white font-black">Level {level}</p><p className="text-white/60 text-xs">Math Ninja</p></div>
+        </div>
+        <p className="text-white/60 text-xs">{xp.toLocaleString()} XP</p>
       </div>
-      <div className="bg-white/20 rounded-full h-2.5 overflow-hidden mb-2">
-        <div
-          className="bg-white h-full rounded-full transition-all duration-700"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
+        <div className="h-full rounded-full bg-white" style={{ width: `${xpInfo.progress}%` }} />
       </div>
-      <p className="text-white/60 text-xs">{xp} / {next} XP</p>
     </div>
   )
 }
