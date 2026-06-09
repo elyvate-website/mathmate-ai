@@ -7,10 +7,10 @@ export const LEVEL_THRESHOLDS = [
 export const CLASSES = [3, 4, 5, 6, 7, 8, 9, 10]
 
 export const SUBJECTS = [
-  { id: 'math',        title: 'Mathematics', titleBn: 'গণিত',           icon: '🧮', color: '#2D7A3A', bgColor: '#E8F5E9', active: true  },
-  { id: 'physics',     title: 'Physics',     titleBn: 'পদার্থবিজ্ঞান', icon: '⚛️', color: '#1976D2', bgColor: '#E3F2FD', active: false },
-  { id: 'chemistry',   title: 'Chemistry',   titleBn: 'রসায়ন',         icon: '🧪', color: '#7B1FA2', bgColor: '#F3E5F5', active: false },
-  { id: 'higher-math', title: 'Higher Math', titleBn: 'উচ্চতর গণিত',  icon: '📈', color: '#E64A19', bgColor: '#FBE9E7', active: false },
+  { id: 'math',        title: 'Mathematics', titleBn: 'গণিত',           icon: '🧮', color: '#2D7A3A', bgColor: '#E8F5E9', active: true,  progress: 72 },
+  { id: 'physics',     title: 'Physics',     titleBn: 'পদার্থবিজ্ঞান', icon: '⚛️', color: '#1976D2', bgColor: '#E3F2FD', active: false, progress: 0  },
+  { id: 'chemistry',   title: 'Chemistry',   titleBn: 'রসায়ন',         icon: '🧪', color: '#7B1FA2', bgColor: '#F3E5F5', active: false, progress: 0  },
+  { id: 'higher-math', title: 'Higher Math', titleBn: 'উচ্চতর গণিত',  icon: '📈', color: '#E64A19', bgColor: '#FBE9E7', active: false, progress: 0  },
 ]
 
 export const ACHIEVEMENT_DEFS = [

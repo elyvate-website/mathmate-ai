@@ -3,13 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/', '/login', '/signup']
 const AUTH_PATHS   = ['/login', '/signup']
+const DEFAULT_SUPABASE_URL = 'https://placeholder.supabase.co'
+const DEFAULT_SUPABASE_ANON_KEY = 'placeholder-anon-key'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {

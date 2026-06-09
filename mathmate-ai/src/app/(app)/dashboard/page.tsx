@@ -1,10 +1,8 @@
 import { createClient }  from '@/lib/supabase/server'
 import { redirect }      from 'next/navigation'
-import { BottomNav }     from '@/components/layout/BottomNav'
 import { getLevelFromXP, getXPForNextLevel } from '@/lib/utils'
 import Link              from 'next/link'
-import Image             from 'next/image'
-import { Flame, ChevronRight, Lock } from 'lucide-react'
+import { Flame, ChevronRight, Lock, Sparkles, Target, Trophy } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -46,85 +44,64 @@ export default async function DashboardPage() {
   const dailyDone    = Math.min(stats?.lessons_completed ?? 0, dailyGoal)
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: '#F5F5F5' }}>
-
-      {/* ── Header ── */}
-      <div className="bg-white px-5 pt-12 pb-5">
-        <div className="flex justify-between items-center mb-5">
-          <div>
-            <p className="text-ninja-muted text-sm font-semibold">Hi, {firstName} 👋</p>
-            <p className="text-ninja-muted text-xs">Keep going, Ninja!</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Streak */}
-            <div className="flex items-center gap-1 bg-orange-50 px-3 py-1.5 rounded-full">
-              <Flame size={14} className="text-orange-500" />
-              <span className="text-orange-600 font-black text-sm">{streak}</span>
-            </div>
-            {/* Coins */}
-            <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1.5 rounded-full">
-              <span className="text-base">🪙</span>
-              <span className="text-yellow-700 font-black text-sm">{coins.toLocaleString()}</span>
-            </div>
-          </div>
+    <div className="min-h-screen pb-24 bg-[linear-gradient(180deg,#f7fff8_0%,#edf7ef_45%,#f8fbf8_100%)]">
+      <div className="relative overflow-hidden px-5 pt-6 pb-5">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="ambient ambient-one" />
+          <div className="ambient ambient-two" />
         </div>
 
-        {/* Level card */}
-        <div
-          className="rounded-2xl p-4 mb-4"
-          style={{ background: 'linear-gradient(135deg, #1B5E20, #2D7A3A)' }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-black text-white text-lg"
-              >
-                {level}
-              </div>
+        <div className="relative z-10 rounded-[30px] border border-white/80 bg-white/85 p-4 shadow-[0_18px_45px_rgba(45,122,58,0.12)] backdrop-blur-xl">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-brand-primary">MathMate AI</p>
+              <h2 className="mt-1 text-2xl font-black text-ninja-text">Hi, {firstName} 👋</h2>
+              <p className="text-sm text-ninja-muted">Your learning journey looks amazing today.</p>
+            </div>
+            <div className="rounded-2xl bg-brand-light px-3 py-2 text-right shadow-sm">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-brand-primary">Streak</p>
+              <p className="text-lg font-black text-brand-primary">{streak} 🔥</p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-[28px] bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary p-4 text-white shadow-[0_18px_35px_rgba(27,94,32,0.28)]">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-black text-base">Level {level}</p>
-                <p className="text-white/70 text-xs font-semibold">Math Ninja</p>
+                <p className="text-[10px] uppercase tracking-[0.35em] text-white/80">Level {level}</p>
+                <p className="text-xl font-black">Math Ninja</p>
               </div>
+              <div className="rounded-2xl bg-white/12 px-3 py-2 text-right text-[11px] text-white/85">{xp.toLocaleString()} XP</div>
             </div>
-            <div className="text-right">
-              <p className="text-white/60 text-xs">{xp.toLocaleString()} / {xpInfo.next.toLocaleString()} XP</p>
+            <div className="mt-3 h-2.5 rounded-full bg-white/15">
+              <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${xpInfo.progress}%` }} />
             </div>
+            <p className="mt-2 text-xs text-white/80">{xpInfo.next.toLocaleString()} XP to next level</p>
           </div>
-          {/* XP bar */}
-          <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-white transition-all duration-700"
-              style={{ width: `${xpInfo.progress}%` }}
-            />
-          </div>
-        </div>
 
-        {/* Daily goal */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-ninja-text font-black text-sm">Daily Goal</p>
-            <p className="text-ninja-muted text-xs">{dailyDone} / {dailyGoal} lessons</p>
-          </div>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: dailyGoal }).map((_, i) => (
-              <div
-                key={i}
-                className="w-7 h-2.5 rounded-full transition-all"
-                style={{ background: i < dailyDone ? '#2D7A3A' : '#E8E8E8' }}
-              />
-            ))}
-            <span className="ml-1 text-base">🎁</span>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <article className="rounded-3xl border border-brand-light bg-gradient-to-br from-white to-brand-light/70 p-3">
+              <Sparkles size={16} className="text-brand-primary" />
+              <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-ninja-muted">Daily Goal</p>
+              <p className="text-lg font-black text-ninja-text">{dailyDone}/{dailyGoal}</p>
+            </article>
+            <article className="rounded-3xl border border-yellow-100 bg-gradient-to-br from-yellow-50 to-white p-3">
+              <Trophy size={16} className="text-amber-500" />
+              <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-ninja-muted">Coins</p>
+              <p className="text-lg font-black text-ninja-text">{coins.toLocaleString()}</p>
+            </article>
           </div>
         </div>
       </div>
 
-      {/* ── Continue Learning ── */}
-      <div className="px-5 mt-4">
-        <p className="font-black text-ninja-text text-base mb-3">Continue Learning</p>
+      <div className="px-5 mt-2">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-base font-black text-ninja-text">Continue Learning</p>
+          <span className="rounded-full bg-brand-light px-3 py-1 text-[11px] font-black text-brand-primary">Personalized</span>
+        </div>
         {lastProgress ? (
           <Link
             href={`/chapters/${profile.class_level}`}
-            className="bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-ninja-border active:scale-95 transition-transform block"
+            className="block rounded-[28px] border border-white/80 bg-white/90 p-4 shadow-[0_18px_35px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 active:scale-95"
           >
             <div
               className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
@@ -163,7 +140,26 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* ── Chapters ── */}
+      <div className="px-5 mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-base font-black text-ninja-text">Quick Actions</p>
+          <Target size={16} className="text-brand-primary" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Practice now', hint: 'Sharpen your skills', href: '/practice' },
+            { label: 'AI tutor', hint: 'Ask for help', href: '/tutor' },
+            { label: 'Progress', hint: 'Track your streak', href: '/progress' },
+            { label: 'Leaderboard', hint: 'Compete with friends', href: '/leaderboard' },
+          ].map((item) => (
+            <Link key={item.label} href={item.href} className="rounded-[26px] border border-white/80 bg-white/90 p-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 active:scale-95">
+              <p className="text-sm font-black text-ninja-text">{item.label}</p>
+              <p className="mt-1 text-xs text-ninja-muted">{item.hint}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       <div className="px-5 mt-5">
         <div className="flex justify-between items-center mb-3">
           <p className="font-black text-ninja-text text-base">Mathematics</p>

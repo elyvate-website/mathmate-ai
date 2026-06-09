@@ -87,6 +87,11 @@ export interface SolutionSteps {
   concept_summary: string
 }
 
+export interface AISolution extends SolutionSteps {
+  problem_bn: string
+  problem_latex: string
+}
+
 export interface UserProgress {
   id: string
   user_id: string
