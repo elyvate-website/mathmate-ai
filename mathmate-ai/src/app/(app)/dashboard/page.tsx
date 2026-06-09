@@ -11,12 +11,22 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: stats }, { data: chapters }, { data: lastProgress }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
+  // 1. Fetch profile first because the chapters query depends on its values
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  // 2. Redirect immediately if no profile exists (saves DB performance)
+  if (!profile) redirect('/onboarding')
+
+  // 3. Fetch the remaining independent queries in parallel
+  const [{ data: stats }, { data: chapters }, { data: lastProgress }] = await Promise.all([
     supabase.from('user_stats').select('*').eq('user_id', user.id).single(),
     supabase.from('chapters')
       .select('*')
-      .eq('class_level', profile?.class_level ?? 9)
+      .eq('class_level', profile.class_level ?? 9)
       .order('chapter_num'),
     supabase.from('user_progress')
       .select('*, chapters(title_bn, chapter_num)')
@@ -25,8 +35,6 @@ export default async function DashboardPage() {
       .limit(1)
       .single(),
   ])
-
-  if (!profile) redirect('/onboarding')
 
   const firstName    = profile.full_name?.split(' ')[0] ?? 'Ninja'
   const xp           = stats?.total_xp ?? 0
