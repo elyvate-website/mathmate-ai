@@ -8,14 +8,14 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: stats }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('user_stats').select('*').eq('user_id', user.id).single(),
+  const [profileResult, statsResult] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+    supabase.from('user_stats').select('*').eq('user_id', user.id).maybeSingle(),
   ])
 
   return (
     <>
-      <ProfileClient profile={profile} stats={stats} userEmail={user.email ?? ''} />
+      <ProfileClient profile={profileResult.data} stats={statsResult.data} userEmail={user.email ?? ''} />
       <BottomNav />
     </>
   )
