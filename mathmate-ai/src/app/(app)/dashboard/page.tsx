@@ -2,7 +2,35 @@ import { createClient }  from '@/lib/supabase/server'
 import { redirect }      from 'next/navigation'
 import { getLevelFromXP, getXPForNextLevel } from '@/lib/utils'
 import Link              from 'next/link'
-import { ChevronRight, Lock } from 'lucide-react'
+import Image             from 'next/image'
+import { BottomNav }     from '@/components/layout/BottomNav'
+import { ChevronRight, Flame, Trophy, BookOpen } from 'lucide-react'
+
+function XPRing({ pct }: { pct: number }) {
+  const r = 44
+  const circ = 2 * Math.PI * r
+  const offset = circ - (pct / 100) * circ
+  return (
+    <svg width="110" height="110" viewBox="0 0 110 110">
+      <circle cx="55" cy="55" r={r} fill="none" stroke="#E8F5E9" strokeWidth="8" />
+      <circle
+        cx="55" cy="55" r={r} fill="none"
+        stroke="url(#xpGrad)" strokeWidth="8"
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
+        transform="rotate(-90 55 55)"
+        style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1)' }}
+      />
+      <defs>
+        <linearGradient id="xpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#2D7A3A" />
+          <stop offset="100%" stopColor="#3DAE4F" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -12,15 +40,19 @@ export default async function DashboardPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile) redirect('/onboarding')
 
-  const [statsResult, chaptersResult, lastProgressResult] = await Promise.all([
+  const [statsRes, chaptersRes, lastProgressRes] = await Promise.all([
     supabase.from('user_stats').select('*').eq('user_id', user.id).maybeSingle(),
     supabase.from('chapters').select('*').eq('class_level', profile.class_level ?? 9).order('chapter_num'),
-    supabase.from('user_progress').select('*, chapters(title_bn,chapter_num)').eq('user_id', user.id).order('completed_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('user_progress')
+      .select('*, chapters(title_bn,chapter_num)')
+      .eq('user_id', user.id)
+      .order('completed_at', { ascending: false })
+      .limit(1).maybeSingle(),
   ])
 
-  const stats      = statsResult.data
-  const chapters   = chaptersResult.data
-  const lastProgress = lastProgressResult.data
+  const stats   = statsRes.data
+  const chapters = chaptersRes.data ?? []
+  const last    = lastProgressRes.data
 
   const firstName = profile.full_name?.split(' ')[0] ?? 'Ninja'
   const xp        = stats?.total_xp    ?? 0
@@ -28,140 +60,172 @@ export default async function DashboardPage() {
   const xpInfo    = getXPForNextLevel(xp)
   const streak    = stats?.current_streak ?? 0
   const coins     = stats?.total_coins   ?? 0
-  const dailyGoal = 5
-  const dailyDone = Math.min(stats?.lessons_completed ?? 0, dailyGoal)
+  const lessons   = stats?.lessons_completed ?? 0
+
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'শুভ সকাল' : hour < 17 ? 'শুভ অপরাহ্ন' : 'শুভ সন্ধ্যা'
+
+  const quickActions = [
+    { label: 'Practice', emoji: '⚡', href: '/practice', bg: '#FFF8E1', color: '#E65100' },
+    { label: 'AI Tutor', emoji: '🤖', href: '/tutor',    bg: '#E3F2FD', color: '#1565C0' },
+    { label: 'Progress', emoji: '📊', href: '/progress', bg: '#F3E5F5', color: '#6A1B9A' },
+    { label: 'Ranks',    emoji: '🏆', href: '/leaderboard', bg: '#FFF3E0', color: '#E65100' },
+  ]
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: 'linear-gradient(180deg,#f7fff8 0%,#edf7ef 45%,#f8fbf8 100%)' }}>
-      {/* Hero card */}
-      <div className="relative overflow-hidden px-5 pt-6 pb-5">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div className="min-h-screen pb-28" style={{ background: '#F7F9F7' }}>
+
+      {/* ── Top hero card ────────────────────────────────────── */}
+      <div className="px-4 pt-12 pb-2 page-enter">
+        <div className="card-hero p-5 relative overflow-hidden" style={{ background: 'linear-gradient(145deg,#1B5E20 0%,#2D7A3A 55%,#388E3C 100%)' }}>
+          {/* ambient blobs */}
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
-        </div>
-        <div className="relative z-10 rounded-[28px] border border-white/80 bg-white/85 p-4 shadow-lg backdrop-blur-xl">
-          <div className="flex items-start justify-between">
+          <div className="ambient ambient-three" />
+
+          <div className="relative z-10 flex items-start justify-between mb-4">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.35em] text-brand-primary font-bold">MathMate AI</p>
-              <h2 className="mt-1 text-2xl font-black text-ninja-text">হ্যালো, {firstName} 👋</h2>
-              <p className="text-xs text-ninja-muted mt-0.5">আজও শেখার দিন! চলো শুরু করি।</p>
+              <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">{greeting} 👋</p>
+              <h2 className="text-white text-2xl font-black mt-0.5">{firstName}</h2>
+              <p className="text-white/50 text-xs mt-0.5">Class {profile.class_level} · Math Ninja</p>
             </div>
-            <div className="rounded-2xl bg-brand-light px-3 py-2 text-right">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-brand-primary font-bold">স্ট্রিক</p>
-              <p className="text-xl font-black text-brand-primary">{streak} 🔥</p>
+            {/* Streak badge */}
+            <div className="flex flex-col items-center bg-white/15 rounded-2xl px-3 py-2 backdrop-blur-sm">
+              <Flame size={20} className="text-orange-300 mb-0.5" />
+              <span className="text-white font-black text-lg leading-none">{streak}</span>
+              <span className="text-white/60 text-[9px] font-bold uppercase tracking-wide">Streak</span>
             </div>
           </div>
 
-          {/* Level bar */}
-          <div className="mt-4 rounded-[22px] p-4 text-white" style={{ background: 'linear-gradient(135deg,#1B5E20,#2D7A3A,#388E3C)' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.3em] text-white/70">Level {level}</p>
-                <p className="text-lg font-black">Math Ninja</p>
+          {/* XP ring + level */}
+          <div className="relative z-10 flex items-center gap-4 bg-white/10 rounded-2xl p-3 backdrop-blur-sm">
+            <div className="relative flex-shrink-0">
+              <XPRing pct={xpInfo.progress} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-white font-black text-lg leading-none">{level}</span>
+                <span className="text-white/60 text-[9px] uppercase font-bold">Level</span>
               </div>
-              <div className="rounded-xl bg-white/15 px-3 py-1.5 text-[11px] text-white/90 font-bold">{xp.toLocaleString()} XP</div>
             </div>
-            <div className="mt-3 h-2 rounded-full bg-white/20">
-              <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${xpInfo.progress}%` }} />
+            <div className="flex-1">
+              <p className="text-white font-black text-base">Math Ninja Lv.{level}</p>
+              <p className="text-white/60 text-xs mt-0.5">{xp.toLocaleString()} XP earned</p>
+              <div className="mt-2 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <div className="h-full rounded-full bg-white transition-all duration-1000"
+                  style={{ width: `${xpInfo.progress}%` }} />
+              </div>
+              <p className="text-white/50 text-[10px] mt-1">{xpInfo.next.toLocaleString()} XP → next level</p>
             </div>
-            <p className="mt-1.5 text-[11px] text-white/70">{xpInfo.next.toLocaleString()} XP → পরের লেভেল</p>
           </div>
 
-          {/* Stats row */}
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-2xl border border-brand-light bg-gradient-to-br from-white to-brand-light/60 p-3">
-              <p className="text-base">🎯</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-ninja-muted font-semibold mt-1">দৈনিক লক্ষ্য</p>
-              <p className="text-lg font-black text-ninja-text">{dailyDone}/{dailyGoal}</p>
+          {/* Coins + lessons row */}
+          <div className="relative z-10 flex gap-2 mt-3">
+            <div className="flex-1 bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
+              <span className="text-base">🪙</span>
+              <div>
+                <p className="text-white font-black text-sm">{coins.toLocaleString()}</p>
+                <p className="text-white/50 text-[9px] uppercase font-bold">Coins</p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-3">
-              <p className="text-base">🪙</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-ninja-muted font-semibold mt-1">কয়েন</p>
-              <p className="text-lg font-black text-ninja-text">{coins.toLocaleString()}</p>
+            <div className="flex-1 bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
+              <span className="text-base">📚</span>
+              <div>
+                <p className="text-white font-black text-sm">{lessons}</p>
+                <p className="text-white/50 text-[9px] uppercase font-bold">Lessons Done</p>
+              </div>
+            </div>
+            <div className="flex-1 bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
+              <span className="text-base">🎯</span>
+              <div>
+                <p className="text-white font-black text-sm">{Math.min(lessons, 5)}/5</p>
+                <p className="text-white/50 text-[9px] uppercase font-bold">Daily</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Continue learning */}
-      <div className="px-5 mt-2">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-base font-black text-ninja-text">চালিয়ে যাও</p>
-          <span className="rounded-full bg-brand-light px-3 py-1 text-[10px] font-black text-brand-primary">পার্সোনালাইজড</span>
+      {/* ── Continue learning ──────────────────────────────────── */}
+      <div className="px-4 mt-4" style={{ animationDelay: '0.06s' }}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-black text-ninja-dark text-base">চালিয়ে যাও</p>
+          <span className="text-[10px] font-black px-2.5 py-1 rounded-full" style={{ background: '#E8F5E9', color: '#2D7A3A' }}>পার্সোনালাইজড</span>
         </div>
-        {lastProgress ? (
-          <Link href={`/chapters/${profile.class_level}`} className="flex items-center gap-3 rounded-[24px] border border-white/80 bg-white/90 p-4 shadow-md transition hover:-translate-y-0.5 active:scale-95">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: '#E8F5E9' }}>📐</div>
-            <div className="flex-1 min-w-0">
-              <p className="font-black text-ninja-text text-sm truncate">{(lastProgress as any).chapters?.title_bn ?? 'গণিত'}</p>
-              <p className="text-brand-primary text-xs font-semibold mt-0.5">অধ্যায় {(lastProgress as any).chapters?.chapter_num ?? '?'} • চলমান</p>
-              <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg,#2D7A3A,#3DAE4F)', width: `${lastProgress.accuracy ?? 50}%` }} />
+        {last ? (
+          <Link href={`/chapters/${profile.class_level}`}>
+            <div className="card-raised p-4 flex items-center gap-3 active:scale-[0.98] transition-transform">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: '#E8F5E9' }}>📐</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-ninja-dark text-sm truncate">{(last as any).chapters?.title_bn}</p>
+                <p className="text-xs font-semibold mt-0.5" style={{ color: '#2D7A3A' }}>অধ্যায় {(last as any).chapters?.chapter_num} · চলমান</p>
+                <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: '#F0F0F0' }}>
+                  <div className="h-full rounded-full progress-bar-glow" style={{ background: 'linear-gradient(90deg,#2D7A3A,#3DAE4F)', width: `${last.accuracy ?? 40}%` }} />
+                </div>
               </div>
+              <ChevronRight size={18} style={{ color: '#2D7A3A' }} />
             </div>
-            <ChevronRight size={18} className="text-ninja-muted flex-shrink-0" />
           </Link>
         ) : (
-          <Link href="/subjects" className="flex items-center gap-3 bg-white rounded-2xl p-4 shadow-sm border border-ninja-border active:scale-95 transition-transform">
-            <div className="w-12 h-12 rounded-xl bg-brand-light flex items-center justify-center text-xl flex-shrink-0">🥷</div>
-            <div className="flex-1">
-              <p className="font-black text-ninja-text text-sm">শেখা শুরু করো!</p>
-              <p className="text-brand-primary text-xs font-semibold mt-0.5">একটি বিষয় বেছে নাও</p>
+          <Link href="/subjects">
+            <div className="card-raised p-4 flex items-center gap-3 active:scale-[0.98] transition-transform">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ background: '#E8F5E9' }}>
+                <Image src="/chill ninja.png" alt="ninja" width={48} height={48} className="object-cover" />
+              </div>
+              <div className="flex-1">
+                <p className="font-black text-ninja-dark text-sm">শেখা শুরু করো!</p>
+                <p className="text-xs font-semibold mt-0.5" style={{ color: '#2D7A3A' }}>একটি বিষয় বেছে নাও →</p>
+              </div>
+              <ChevronRight size={18} style={{ color: '#2D7A3A' }} />
             </div>
-            <ChevronRight size={18} className="text-ninja-muted" />
           </Link>
         )}
       </div>
 
-      {/* Quick actions */}
-      <div className="px-5 mt-5">
-        <p className="text-base font-black text-ninja-text mb-3">কুইক অ্যাকশন</p>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Practice', hint: 'দক্ষতা বাড়াও', href: '/practice', emoji: '⚡' },
-            { label: 'AI Tutor', hint: 'সাহায্য নাও', href: '/tutor', emoji: '🤖' },
-            { label: 'Progress', hint: 'অগ্রগতি দেখো', href: '/progress', emoji: '📊' },
-            { label: 'Leaderboard', hint: 'প্রতিযোগিতা করো', href: '/leaderboard', emoji: '🏆' },
-          ].map(item => (
-            <Link key={item.label} href={item.href} className="rounded-[22px] border border-white/80 bg-white/90 p-4 shadow-md transition hover:-translate-y-0.5 active:scale-95">
-              <p className="text-xl">{item.emoji}</p>
-              <p className="text-sm font-black text-ninja-text mt-2">{item.label}</p>
-              <p className="text-xs text-ninja-muted mt-0.5">{item.hint}</p>
+      {/* ── Quick actions horizontal scroll ───────────────────── */}
+      <div className="mt-4 px-4">
+        <p className="font-black text-ninja-dark text-base mb-3">কুইক অ্যাকশন</p>
+        <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+          {quickActions.map((a, i) => (
+            <Link key={a.label} href={a.href}>
+              <div
+                className="flex-shrink-0 w-24 rounded-2xl p-3.5 flex flex-col items-center gap-2 active:scale-95 transition-transform card-raised"
+                style={{ animationDelay: `${i * 0.07}s` }}
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl" style={{ background: a.bg }}>
+                  {a.emoji}
+                </div>
+                <p className="font-black text-xs text-center" style={{ color: a.color }}>{a.label}</p>
+              </div>
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Chapter list */}
-      <div className="px-5 mt-5">
-        <div className="flex justify-between items-center mb-3">
-          <p className="font-black text-ninja-text text-base">অধ্যায়সমূহ</p>
-          <Link href={`/chapters/${profile.class_level}`} className="text-brand-primary text-sm font-bold">সব দেখো →</Link>
+      {/* ── Chapter list ──────────────────────────────────────── */}
+      <div className="px-4 mt-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-black text-ninja-dark text-base">অধ্যায়সমূহ</p>
+          <Link href={`/chapters/${profile.class_level}`} className="text-sm font-black" style={{ color: '#2D7A3A' }}>সব দেখো →</Link>
         </div>
-        <div className="space-y-2">
-          {(chapters ?? []).slice(0, 6).map((ch, i) => {
-            const locked = i > 2
-            return (
-              <Link
-                key={ch.id}
-                href={locked ? '#' : `/lessons/${ch.id}`}
-                className={`bg-white rounded-2xl px-4 py-3 flex items-center gap-3 border border-ninja-border shadow-sm ${locked ? 'opacity-50 pointer-events-none' : 'active:scale-95 transition-transform'}`}
-              >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0" style={{ background: locked ? '#F5F5F5' : '#E8F5E9', color: locked ? '#BDBDBD' : '#2D7A3A' }}>
+        <div className="space-y-2 stagger-children">
+          {chapters.slice(0, 5).map((ch, i) => (
+            <Link key={ch.id} href={`/lessons/${ch.id}`}>
+              <div className="card-flat p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0"
+                  style={{ background: '#E8F5E9', color: '#2D7A3A' }}>
                   {ch.chapter_num}
                 </div>
-                <p className="flex-1 font-bold text-ninja-text text-sm truncate">{ch.title_bn}</p>
-                {locked ? <Lock size={14} className="text-ninja-muted flex-shrink-0" /> : <ChevronRight size={16} className="text-brand-primary flex-shrink-0" />}
-              </Link>
-            )
-          })}
-          {(!chapters || chapters.length === 0) && (
-            <div className="text-center py-10">
-              <p className="text-ninja-muted font-bold text-sm">কন্টেন্ট শীঘ্রই আসছে...</p>
-            </div>
-          )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-ninja-dark text-sm truncate">{ch.title_bn}</p>
+                  {ch.title_en && <p className="text-ninja-muted text-xs truncate">{ch.title_en}</p>}
+                </div>
+                <ChevronRight size={16} className="text-ninja-muted flex-shrink-0" />
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
+
+      <BottomNav />
     </div>
   )
 }

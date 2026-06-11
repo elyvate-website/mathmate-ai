@@ -21,7 +21,7 @@ export default async function PracticePage() {
     .limit(12)
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="min-h-screen pb-28 page-enter" style={{ background:"#F7F9F7" }}>
       <div className="px-5 pt-12 pb-5">
         <h1 className="text-2xl font-black text-ninja-text">অনুশীলন</h1>
         <p className="text-ninja-muted text-sm mt-1">প্রতিদিন অনুশীলন করো, এগিয়ে থাকো 💪</p>

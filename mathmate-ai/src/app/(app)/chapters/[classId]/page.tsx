@@ -31,7 +31,7 @@ export default async function ChaptersPage({ params }: { params: { classId: stri
     : 0
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="min-h-screen pb-28 page-enter" style={{ background:"#F7F9F7" }}>
       <div className="px-5 pt-12 pb-5">
         <Link href="/subjects" className="flex items-center gap-1 text-ninja-muted mb-4">
           <ChevronLeft size={18} />

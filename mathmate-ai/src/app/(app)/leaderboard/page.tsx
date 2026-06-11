@@ -50,7 +50,7 @@ export default async function LeaderboardPage() {
   const MEDAL_ORDER  = [1, 0, 2]
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="min-h-screen pb-28 page-enter" style={{ background:"#F7F9F7" }}>
       <div className="px-5 pt-12 pb-5">
         <Link href="/dashboard" className="flex items-center gap-1 text-ninja-muted mb-4">
           <ChevronLeft size={18} />

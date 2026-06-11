@@ -24,7 +24,7 @@ export default async function LessonsPage({ params }: { params: { chapterId: str
   const progressPct          = totalTopics > 0 ? Math.round((Math.min(completedCount, totalTopics) / totalTopics) * 100) : 0
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="min-h-screen pb-28 page-enter" style={{ background:"#F7F9F7" }}>
       {/* Header */}
       <div className="px-5 pt-12 pb-5">
         <Link href={`/chapters/${chapter.class_level}`} className="flex items-center gap-1 text-ninja-muted mb-4">
