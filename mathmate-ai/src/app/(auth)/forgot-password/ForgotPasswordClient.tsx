@@ -22,7 +22,7 @@ export default function ForgotPasswordClient() {
     })
 
     setLoading(false)
-    if (err) { setError(`Error: ${err.message} (${err.status ?? 'no status'})`); return }
+    if (err) { setError('সমস্যা হয়েছে। আবার চেষ্টা করো।'); return }
     setSent(true)
   }
 
