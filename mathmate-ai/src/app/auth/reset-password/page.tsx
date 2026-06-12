@@ -4,18 +4,18 @@ import { useRouter }            from 'next/navigation'
 import Image                    from 'next/image'
 import Link                     from 'next/link'
 import { createClient }         from '@/lib/supabase/client'
-import { Lock, Eye, EyeOff, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react'
+import { Lock, Eye, EyeOff, CheckCircle2, ArrowRight, ShieldCheck, AlertTriangle } from 'lucide-react'
 
 const strengthInfo = (pw: string) => {
   if (!pw) return { score: 0, label: '', color: '' }
   let score = 0
-  if (pw.length >= 6)  score++
-  if (pw.length >= 10) score++
-  if (/[A-Z]/.test(pw)) score++
-  if (/[0-9]/.test(pw)) score++
-  if (/[^A-Za-z0-9]/.test(pw)) score++
-  if (score <= 1) return { score, label: 'দুর্বল',    color: '#EF4444' }
-  if (score <= 3) return { score, label: 'মাঝারি',   color: '#F59E0B' }
+  if (pw.length >= 6)              score++
+  if (pw.length >= 10)             score++
+  if (/[A-Z]/.test(pw))            score++
+  if (/[0-9]/.test(pw))            score++
+  if (/[^A-Za-z0-9]/.test(pw))    score++
+  if (score <= 1) return { score, label: 'দুর্বল',     color: '#EF4444' }
+  if (score <= 3) return { score, label: 'মাঝারি',    color: '#F59E0B' }
   return              { score, label: 'শক্তিশালী', color: '#22C55E' }
 }
 
@@ -30,36 +30,121 @@ export default function ResetPasswordPage() {
   const [loading,   setLoading]   = useState(false)
   const [done,      setDone]      = useState(false)
   const [error,     setError]     = useState('')
+  // null = checking, true = valid session, false = invalid/expired
   const [validLink, setValidLink] = useState<boolean | null>(null)
 
   const strength = strengthInfo(password)
   const match    = confirm.length > 0 && password === confirm
 
   useEffect(() => {
-    // Supabase puts the session in the URL hash when the user clicks the reset link
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setValidLink(true)
-      if (event === 'SIGNED_IN' && validLink === null) setValidLink(false)
+    let resolved = false
+
+    // 1. Listen for PASSWORD_RECOVERY event (Supabase fires this when the
+    //    reset link contains a hash fragment — older implicit flow)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (resolved) return
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        resolved = true
+        setValidLink(true)
+      }
     })
-    // Also check immediately
+
+    // 2. Check if the callback route already exchanged the token and set a
+    //    session in cookies (PKCE / token_hash flow — the normal path)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setValidLink(true)
+      if (resolved) return
+      if (session) {
+        resolved = true
+        setValidLink(true)
+      } else {
+        // Give the auth state change listener a moment before giving up
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true
+            setValidLink(false)
+          }
+        }, 1500)
+      }
     })
+
     return () => subscription.unsubscribe()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleReset = async () => {
-    if (password.length < 6)       { setError('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return }
-    if (password !== confirm)      { setError('পাসওয়ার্ড দুটি মিলছে না।'); return }
+    if (password.length < 6)  { setError('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return }
+    if (password !== confirm)  { setError('পাসওয়ার্ড দুটি মিলছে না।'); return }
     setLoading(true); setError('')
 
     const { error: err } = await supabase.auth.updateUser({ password })
     setLoading(false)
-    if (err) { setError('পাসওয়ার্ড আপডেট করা যায়নি। আবার চেষ্টা করো।'); return }
+
+    if (err) {
+      setError('পাসওয়ার্ড আপডেট করা যায়নি। আবার চেষ্টা করো।')
+      return
+    }
+
+    // Sign out so user logs in fresh with new password
+    await supabase.auth.signOut()
     setDone(true)
-    setTimeout(() => router.push('/dashboard'), 2500)
+    setTimeout(() => router.push('/login'), 2500)
   }
 
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (validLink === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F9F7' }}>
+        <div className="flex flex-col items-center gap-4">
+          <span className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold" style={{ color: '#9E9E9E' }}>যাচাই করা হচ্ছে...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Invalid / expired link ────────────────────────────────────────────────
+  if (validLink === false) {
+    return (
+      <div className="min-h-screen flex flex-col page-enter" style={{ background: '#F7F9F7' }}>
+        <div className="relative overflow-hidden px-6 pt-14 pb-8 flex flex-col items-center"
+          style={{ background: 'linear-gradient(160deg,#1B5E20 0%,#2D7A3A 60%,#388E3C 100%)' }}>
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="w-24 h-24 mb-4">
+              <Image src="/chill ninja.png" alt="ninja" width={96} height={96} className="object-contain drop-shadow-2xl" />
+            </div>
+            <h1 className="text-white text-2xl font-black text-center">লিংক মেয়াদোত্তীর্ণ</h1>
+            <p className="text-white/60 text-sm mt-1 text-center">একটি নতুন রিসেট লিংক নাও</p>
+          </div>
+        </div>
+
+        <div className="flex-1 px-5 -mt-5 relative z-10">
+          <div className="card-hero p-6 rounded-[28px]">
+            <div className="flex flex-col items-center text-center py-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                style={{ background: '#FEF2F2' }}>
+                <AlertTriangle size={30} style={{ color: '#EF4444' }} />
+              </div>
+              <h2 className="font-black text-xl mb-2" style={{ color: '#1A1A1A' }}>লিংকটি কাজ করছে না</h2>
+              <p className="text-sm font-semibold mb-6" style={{ color: '#9E9E9E' }}>
+                পাসওয়ার্ড রিসেট লিংকটি মেয়াদোত্তীর্ণ হয়ে গেছে বা ইতিমধ্যে ব্যবহার করা হয়েছে।
+                নতুন লিংকের জন্য আবার চেষ্টা করো।
+              </p>
+              <Link href="/forgot-password"
+                className="w-full py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                style={{ background: 'linear-gradient(135deg,#2D7A3A,#3DAE4F)', boxShadow: '0 8px 24px rgba(45,122,58,0.30)' }}>
+                নতুন লিংক পাঠাও <ArrowRight size={16} />
+              </Link>
+              <Link href="/login" className="mt-4 text-sm font-bold" style={{ color: '#9E9E9E' }}>
+                লগইনে ফিরে যাও
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Main reset form ───────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col page-enter" style={{ background: '#F7F9F7' }}>
 
@@ -82,7 +167,7 @@ export default function ResetPasswordPage() {
             {done ? 'সফল হয়েছে! 🎉' : 'নতুন পাসওয়ার্ড'}
           </h1>
           <p className="text-white/60 text-sm mt-1 text-center">
-            {done ? 'ড্যাশবোর্ডে নিয়ে যাচ্ছি...' : 'একটি শক্তিশালী পাসওয়ার্ড তৈরি করো'}
+            {done ? 'লগইন পেজে নিয়ে যাচ্ছি...' : 'একটি শক্তিশালী পাসওয়ার্ড তৈরি করো'}
           </p>
         </div>
       </div>
@@ -105,12 +190,12 @@ export default function ResetPasswordPage() {
               <div className="flex items-center gap-2 px-4 py-2.5 rounded-full mb-4"
                 style={{ background: '#E8F5E9' }}>
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-black" style={{ color: '#2D7A3A' }}>ড্যাশবোর্ডে নিয়ে যাচ্ছি...</span>
+                <span className="text-xs font-black" style={{ color: '#2D7A3A' }}>লগইন পেজে নিয়ে যাচ্ছি...</span>
               </div>
-              <Link href="/dashboard"
+              <Link href="/login"
                 className="w-full py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 style={{ background: 'linear-gradient(135deg,#2D7A3A,#3DAE4F)', boxShadow: '0 8px 24px rgba(45,122,58,0.30)' }}>
-                ড্যাশবোর্ডে যাও <ArrowRight size={16} />
+                লগইন করো <ArrowRight size={16} />
               </Link>
             </div>
           ) : (
@@ -206,8 +291,8 @@ export default function ResetPasswordPage() {
                 <p className="text-xs font-black mb-2" style={{ color: '#9E9E9E' }}>পাসওয়ার্ডের নিয়ম</p>
                 <div className="space-y-1.5">
                   {[
-                    { rule: 'কমপক্ষে ৬ অক্ষর',         ok: password.length >= 6 },
-                    { rule: 'কমপক্ষে একটি সংখ্যা',    ok: /[0-9]/.test(password) },
+                    { rule: 'কমপক্ষে ৬ অক্ষর',              ok: password.length >= 6 },
+                    { rule: 'কমপক্ষে একটি সংখ্যা',          ok: /[0-9]/.test(password) },
                     { rule: 'কমপক্ষে একটি বড় হাতের অক্ষর', ok: /[A-Z]/.test(password) },
                   ].map(r => (
                     <div key={r.rule} className="flex items-center gap-2">
