@@ -65,7 +65,7 @@ export default async function DashboardPage() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'শুভ সকাল' : hour < 17 ? 'শুভ অপরাহ্ন' : 'শুভ সন্ধ্যা'
 
-  const quickActions = [
+  const quickActions = [math
     { label: 'Practice', emoji: '⚡', href: '/practice', bg: '#FFF8E1', color: '#E65100' },
     { label: 'AI Tutor', emoji: '🤖', href: '/tutor',    bg: '#E3F2FD', color: '#1565C0' },
     { label: 'Progress', emoji: '📊', href: '/progress', bg: '#F3E5F5', color: '#6A1B9A' },
